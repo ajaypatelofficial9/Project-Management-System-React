@@ -11,21 +11,25 @@ function UserSignup() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
+    const handleImageUpload = async (file, setFieldValue) => {
+        if (!file) return;
+
+        try {
+            const uploadRes = await AuthServices.UploadProfilePhoto(file);
+            if (uploadRes.status === 200) {
+                toast.success('Profile photo uploaded successfully');
+                setFieldValue('profileImageURL', uploadRes.data.profileImageURL);
+            } else {
+                toast.error(uploadRes.message || 'Profile upload failed');
+            }
+        } catch (err) {
+            console.error('Image upload error:', err);
+            toast.error('Failed to upload profile photo');
+        }
+    };
+
     const handleSignup = async (values) => {
         try {
-            let profileImageURL = null;
-
-            // Upload profile photo if provided
-            if (values.profilePhoto) {
-                const uploadRes = await AuthServices.UploadProfilePhoto(values.profilePhoto);
-                
-                if (uploadRes.message !== 'Upload successfully') {
-                    toast.error(uploadRes.message || 'Profile upload failed');
-                    return;
-                }
-                profileImageURL = uploadRes.data.profileImageURL;
-            }
-
             // Prepare signup payload
             const signupPayload = {
                 firstName: values.firstName,
@@ -33,29 +37,15 @@ function UserSignup() {
                 address: values.address,
                 email: values.email,
                 password: values.password,
-                profileImageURL,
+                profileImageURL: values.profileImageURL,
             };
 
             // Call signup API
             const res = await AuthServices.SignUp(signupPayload);
-
-            if (res.message === 'Signup successfully') {
-                toast.success('Signup completed successfully');
-                
-                // Store user data in Redux
-                const userData = {
-                    email: values.email,
-                    firstName: values.firstName,
-                    lastName: values.lastName,
-                    profileImageURL,
-                    role: 'user',
-                    token: res.data?.token
-                };
-                
-                dispatch(updateUserAuthdataLogin(userData));
-                
-                // Navigate to profile page
-                navigate(baseRoutes.userBaseRoutes);
+console.log("res :",res);
+            if (res.status === 200) {
+                toast.success('Signup successfully');
+                navigate(baseRoutes.loginPage);
             } else {
                 toast.error(res.message || 'Signup failed');
             }
@@ -71,7 +61,8 @@ function UserSignup() {
         address: "",
         email: "",
         password: "",
-        profilePhoto: null
+        profilePhoto: null,
+        profileImageURL: null
     }
 
     return <>
@@ -162,7 +153,11 @@ function UserSignup() {
                                 name="profilePhoto"
                                 accept="image/*"
                                 onChange={(event) => {
-                                    setFieldValue("profilePhoto", event.currentTarget.files[0]);
+                                    const file = event.currentTarget.files[0];
+                                    if (file) {
+                                        setFieldValue("profilePhoto", file);
+                                        handleImageUpload(file, setFieldValue);
+                                    }
                                 }}
                                 className="form-control"
                             />
