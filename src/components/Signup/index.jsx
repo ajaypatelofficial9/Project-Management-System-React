@@ -1,12 +1,70 @@
+import { useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { Formik } from "formik";
-import * as Yup from "yup";
-import './index.css'
+import { toast } from 'react-toastify';
+import { updateUserAuthdataLogin } from '../../redux/AuthSlice/index.slice.jsx';
+import AuthServices from '../../services/auth.service.js';
+import baseRoutes from '../../constants/routes.js';
 import validation from './validation'
-function UserSignup() {
 
-    const onSubmit = (values) => {
-        console.log("values :", values)
+function UserSignup() {
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+
+    const handleSignup = async (values) => {
+        try {
+            let profileImageURL = null;
+
+            // Upload profile photo if provided
+            if (values.profilePhoto) {
+                const uploadRes = await AuthServices.UploadProfilePhoto(values.profilePhoto);
+                
+                if (uploadRes.message !== 'Upload successfully') {
+                    toast.error(uploadRes.message || 'Profile upload failed');
+                    return;
+                }
+                profileImageURL = uploadRes.data.profileImageURL;
+            }
+
+            // Prepare signup payload
+            const signupPayload = {
+                firstName: values.firstName,
+                lastName: values.lastName,
+                address: values.address,
+                email: values.email,
+                password: values.password,
+                profileImageURL,
+            };
+
+            // Call signup API
+            const res = await AuthServices.SignUp(signupPayload);
+
+            if (res.message === 'Signup successfully') {
+                toast.success('Signup completed successfully');
+                
+                // Store user data in Redux
+                const userData = {
+                    email: values.email,
+                    firstName: values.firstName,
+                    lastName: values.lastName,
+                    profileImageURL,
+                    role: 'user',
+                    token: res.data?.token
+                };
+                
+                dispatch(updateUserAuthdataLogin(userData));
+                
+                // Navigate to profile page
+                navigate(baseRoutes.userBaseRoutes);
+            } else {
+                toast.error(res.message || 'Signup failed');
+            }
+        } catch (err) {
+            console.error('Signup error:', err);
+            toast.error('Something went wrong during signup');
+        }
     }
+
     const initialValues = {
         firstName: "",
         lastName: "",
@@ -15,11 +73,12 @@ function UserSignup() {
         password: "",
         profilePhoto: null
     }
+
     return <>
         <Formik
             validationSchema={validation}
             initialValues={initialValues}
-            onSubmit={onSubmit}
+            onSubmit={handleSignup}
         >
             {({
                 values,

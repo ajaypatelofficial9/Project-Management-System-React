@@ -1,17 +1,47 @@
+import { useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { Formik } from "formik";
-import * as Yup from "yup";
+import { toast } from 'react-toastify';
+import { updateUserAuthdataLogin } from '../../redux/AuthSlice/index.slice.jsx';
+import AuthServices from '../../services/auth.service.js';
+import baseRoutes from '../../constants/routes.js';
 import './index.css'
 import validation from './validation'
-function UserLogin() {
 
-    const onSubmit = (values) => {
-        console.log("values :", values)
+function UserLogin() {
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+
+    const handleLogin = async (values) => {
+        const { email, password } = values || {};
+
+        try {
+            const payload = { email, password };
+            const res = await AuthServices.Login(payload);
+
+            if (res.message === 'Login successfully') {
+                toast.success('Login successfully');
+                const userData = {
+                    email: email,
+                    token: res.data.token,
+                    ...res.data.userDetails,
+                    role: 'user'
+                };
+                dispatch(updateUserAuthdataLogin(userData));
+                navigate(baseRoutes.userBaseRoutes);
+            } else {
+                toast.error(res.message || 'Login failed');
+            }
+        } catch (err) {
+            console.error('Login error:', err);
+            toast.error('Something went wrong during login');
+        }
     }
     return <>
         <Formik
             validationSchema={validation}
             initialValues={{ email: "", password: "" }}
-            onSubmit={onSubmit}
+            onSubmit={handleLogin}
         >
             {({
                 values,
