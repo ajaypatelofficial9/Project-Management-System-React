@@ -18,7 +18,7 @@ function UserLogin() {
         try {
             const payload = { email, password };
             const res = await AuthServices.Login(payload);
-console.log("res :",res);
+
             if (res.status === 200) {
                 toast.success('Login successfully');
                 const userData = {

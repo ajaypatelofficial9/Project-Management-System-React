@@ -42,7 +42,7 @@ function UserSignup() {
 
             // Call signup API
             const res = await AuthServices.SignUp(signupPayload);
-console.log("res :",res);
+
             if (res.status === 200) {
                 toast.success('Signup successfully');
                 navigate(baseRoutes.loginPage);

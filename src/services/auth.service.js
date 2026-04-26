@@ -44,26 +44,35 @@ const AuthServices = {
             });
 
             const data = await response.json();
-            console.log("111111 :", data);
+            console.log("Login response:", data);
 
-            if (!data?.data?.token) {
-                console.log(2222222,data);
-                throw {
-                    message: data?.data.errorMsg || 'Login failed',
-                    status: data,
+            // Check if the response indicates success
+            if (data?.data?.token) {
+                return {
+                    message: 'Login successfully',
+                    status: 200,
+                    data: {
+                        token: data.data.token,
+                        userDetails: data.data,
+                    },
                 };
             }
 
-            return {
-                message: 'Login successfully',
-                status: 200,
-                data: {
-                    token: data?.data.token,
-                    userDetails: data?.data,
-                },
+            if (data?.status === false || !response.ok) {
+                throw {
+                    message: data?.msg || data?.message || 'Invalid credentials',
+                    status: response.status || 400,
+                };
+            }
+
+            // Fallback error
+            throw {
+                message: 'Login failed',
+                status: 400,
             };
+
         } catch (error) {
-            console.log(55555555);
+            console.log('Login error:', error);
             return {
                 message: error.message || 'Something went wrong during login',
                 status: error.status || 500,
