@@ -7,6 +7,12 @@ import UserLogin from './components/Login/index.jsx';
 import UserSignup from './components/Signup/index.jsx';
 import UserProfile from './components/Dashboard/index.jsx';
 import HomePage from './components/Dashboard/homepage.jsx';
+import { withAuth, withGuest } from './HOCs/AuthHOCs.jsx';
+
+const AuthenticatedUserProfile = withAuth(UserProfile);
+const GuestUserLogin = withGuest(UserLogin);
+const GuestUserSignup = withGuest(UserSignup);
+
 function App() {
 
   return <>
@@ -24,9 +30,9 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<UserLogin />} />
-        <Route path="/signup" element={<UserSignup />} />
-        <Route path="/profile" element={<UserProfile />} />
+        <Route path="/login" element={<GuestUserLogin />} />
+        <Route path="/signup" element={<GuestUserSignup />} />
+        <Route path="/profile" element={<AuthenticatedUserProfile />} />
       </Routes>
     </BrowserRouter>
   </>

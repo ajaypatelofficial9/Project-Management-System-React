@@ -1,107 +1,110 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const AuthServices = {
-  async SignUp(payload) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/signup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+    async SignUp(payload) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/signup`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
 
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw {
-          message: data.errorMsg || 'Signup failed',
-          status: response.status,
-        };
-      }
+            const data = await response.json();
 
-      return {
-        message: 'Signup successfully',
-        status: 200,
-        data,
-      };
-    } catch (error) {
-      return {
-        message: error.message || 'Something went wrong during signup',
-        status: error.status || 500,
-      };
-    }
-  },
+            if (!response.ok) {
+                throw {
+                    message: data.errorMsg || 'Signup failed',
+                    status: response.status,
+                };
+            }
 
-  async Login(payload) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/signin`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+            return {
+                message: 'Signup successfully',
+                status: 200,
+                data,
+            };
+        } catch (error) {
+            return {
+                message: error.message || 'Something went wrong during signup',
+                status: error.status || 500,
+            };
+        }
+    },
 
-      const data = await response.json();
+    async Login(payload) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/signin`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
 
-      if (!response.ok || !data.token) {
-        throw {
-          message: data.errorMsg || 'Login failed',
-          status: response.status,
-        };
-      }
+            const data = await response.json();
+            console.log("111111 :", data);
 
-      return {
-        message: 'Login successfully',
-        status: 200,
-        data: {
-          token: data.token,
-          userDetails: data,
-        },
-      };
-    } catch (error) {
-      return {
-        message: error.message || 'Something went wrong during login',
-        status: error.status || 500,
-      };
-    }
-  },
+            if (!data?.data?.token) {
+                console.log(2222222,data);
+                throw {
+                    message: data?.data.errorMsg || 'Login failed',
+                    status: data,
+                };
+            }
 
-  async UploadProfilePhoto(file) {
-    try {
-      const fileUpload = new FormData();
-      fileUpload.append('file', file);
+            return {
+                message: 'Login successfully',
+                status: 200,
+                data: {
+                    token: data?.data.token,
+                    userDetails: data?.data,
+                },
+            };
+        } catch (error) {
+            console.log(55555555);
+            return {
+                message: error.message || 'Something went wrong during login',
+                status: error.status || 500,
+            };
+        }
+    },
 
-      const response = await fetch(`${API_BASE_URL}/media/upload/image/user`, {
-        method: 'POST',
-        body: fileUpload,
-      });
+    async UploadProfilePhoto(file) {
+        try {
+            const fileUpload = new FormData();
+            fileUpload.append('file', file);
 
-      const data = await response.json();
+            const response = await fetch(`${API_BASE_URL}/media/upload/image/user`, {
+                method: 'POST',
+                body: fileUpload,
+            });
 
-      if (!response.ok || !data.status) {
-        throw {
-          message: data.message || data.errorMsg || 'Profile upload failed',
-          status: response.status,
-        };
-      }
+            const data = await response.json();
 
-      return {
-        message: 'Upload successfully',
-        status: 200,
-        data: {
-          profileImageURL: data.baseUrl,
-          mediaId: data.id,
-        },
-      };
-    } catch (error) {
-      return {
-        message: error.message || 'Something went wrong during upload',
-        status: error.status || 500,
-      };
-    }
-  },
+            if (!response.ok || !data.status) {
+                throw {
+                    message: data.message || data.errorMsg || 'Profile upload failed',
+                    status: response.status,
+                };
+            }
+
+            return {
+                message: 'Upload successfully',
+                status: 200,
+                data: {
+                    profileImageURL: data.baseUrl,
+                    mediaId: data.id,
+                },
+            };
+        } catch (error) {
+            return {
+                message: error.message || 'Something went wrong during upload',
+                status: error.status || 500,
+            };
+        }
+    },
 };
 
 export default AuthServices;

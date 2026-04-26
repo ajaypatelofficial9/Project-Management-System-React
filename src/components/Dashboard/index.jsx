@@ -2,10 +2,23 @@ import { Formik } from "formik";
 import * as Yup from "yup";
 import './index.css'
 import { useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { logoutUserAuthAction, getUserAuthData } from '../../redux/AuthSlice/index.slice.jsx';
+import { toast } from 'react-toastify';
 
 function UserProfile() {
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+    const userAuthData = useSelector(getUserAuthData);
     const [profilePhoto, setProfilePhoto] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
+
+    const handleLogout = () => {
+        dispatch(logoutUserAuthAction());
+        toast.success('Logged out successfully');
+        navigate('/');
+    };
 
     const onSubmit = (values) => {
         console.log("Updated values:", values);
@@ -15,10 +28,10 @@ function UserProfile() {
     }
 
     const initialValues = JSON.parse(localStorage.getItem('userProfile')) || {
-        firstName: "John",
-        lastName: "Doe",
-        address: "123 Main St",
-        email: "john.doe@example.com",
+        firstName: userAuthData.firstName || "John",
+        lastName: userAuthData.lastName || "Doe",
+        address: userAuthData.address || "123 Main St",
+        email: userAuthData.email || "john.doe@example.com",
         profilePhoto: null
     };
 
@@ -117,6 +130,21 @@ function UserProfile() {
                                     <button className="mt-3" type="button" onClick={() => setIsEditing(false)}>Cancel</button>
                                 </>
                             )}
+                            <button
+                                type="button"
+                                onClick={handleLogout}
+                                style={{
+                                    backgroundColor: '#dc3545',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '10px 20px',
+                                    borderRadius: '5px',
+                                    cursor: 'pointer',
+                                    marginTop: '20px'
+                                }}
+                            >
+                                Logout
+                            </button>
                         </form>
                     </div>
                 )}

@@ -18,8 +18,8 @@ function UserLogin() {
         try {
             const payload = { email, password };
             const res = await AuthServices.Login(payload);
-
-            if (res.message === 'Login successfully') {
+console.log("res :",res);
+            if (res.status === 200) {
                 toast.success('Login successfully');
                 const userData = {
                     email: email,
@@ -28,7 +28,7 @@ function UserLogin() {
                     role: 'user'
                 };
                 dispatch(updateUserAuthdataLogin(userData));
-                navigate(baseRoutes.userBaseRoutes);
+                navigate(baseRoutes.userProfile);
             } else {
                 toast.error(res.message || 'Login failed');
             }
