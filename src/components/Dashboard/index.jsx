@@ -28,10 +28,10 @@ function UserProfile() {
     }
 
     const initialValues = JSON.parse(localStorage.getItem('userProfile')) || {
-        firstName: userAuthData.firstName || "John",
-        lastName: userAuthData.lastName || "Doe",
-        address: userAuthData.address || "123 Main St",
-        email: userAuthData.email || "john.doe@example.com",
+        firstName: userAuthData.firstName,
+        lastName: userAuthData.lastName,
+        address: userAuthData.address,
+        email: userAuthData.email,
         profilePhoto: null
     };
 
