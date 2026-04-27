@@ -16,12 +16,10 @@ export const authSlice = createSlice({
           userAuthdata: {},
         };
       },
-    updateUserAuthDataAction: (state, action) => {
-      // return (state = {
-      //   ...state,
-      //   superAdminAuth: { ...action.payload },
-      // });
-    },
+      updateUserAuthDataAction: (state, action) => ({
+        ...state,
+        userAuthdata: { ...state.userAuthdata, ...action.payload },
+      }),
   },
 });
 

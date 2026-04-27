@@ -114,6 +114,41 @@ const AuthServices = {
             };
         }
     },
+
+    async UpdateProfile(profileData) {
+        try {
+            const token = localStorage.getItem('token') || profileData.token;
+            const response = await fetch(`${API_BASE_URL}/profile`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify(profileData),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw {
+                    message: data.message || 'Profile update failed',
+                    status: response.status,
+                };
+            }
+
+            return {
+                message: 'Profile updated successfully',
+                status: 200,
+                data: data.data,
+            };
+        } catch (error) {
+            console.error('Profile update error:', error);
+            return {
+                message: error.message || 'Something went wrong during profile update',
+                status: error.status || 500,
+            };
+        }
+    },
 };
 
 export default AuthServices;
