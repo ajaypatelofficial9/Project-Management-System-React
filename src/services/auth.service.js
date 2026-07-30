@@ -44,8 +44,7 @@ const AuthServices = {
             });
 
             const data = await response.json();
-            console.log("Login response:", data);
-
+            localStorage.setItem('token', data?.data?.token || '');
             // Check if the response indicates success
             if (data?.data?.token) {
                 return {
@@ -82,12 +81,16 @@ const AuthServices = {
 
     async UploadProfilePhoto(file) {
         try {
+            const token = localStorage.getItem('token');
             const fileUpload = new FormData();
             fileUpload.append('file', file);
 
             const response = await fetch(`${API_BASE_URL}/media/upload/image/user`, {
                 method: 'POST',
                 body: fileUpload,
+                headers: {
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
             });
 
             const data = await response.json();
