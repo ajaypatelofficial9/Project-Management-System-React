@@ -58,6 +58,13 @@ function ProjectDetailPage() {
         }
     };
 
+    const handleTaskFormChange = (field, value) => {
+        setTaskForm((prev) => ({ ...prev, [field]: value }));
+        if (taskErrors[field]) {
+            setTaskErrors((prev) => ({ ...prev, [field]: undefined }));
+        }
+    };
+
     const validateTask = () => {
         const errs = {};
         if (!taskForm.title.trim()) {
@@ -170,14 +177,13 @@ function ProjectDetailPage() {
                     <span className="card-title">Tasks ({(project.tasks || []).length})</span>
                     {isAdmin && (
                         <button className="btn btn-primary btn-sm" onClick={() => setShowTaskModal(true)}>
-                            + Add Task
+                            Add Task
                         </button>
                     )}
                 </div>
 
                 {(project.tasks || []).length === 0 ? (
                     <EmptyState
-                        icon="✅"
                         title="No tasks yet"
                         description={isAdmin ? 'Add the first task to this project.' : 'No tasks have been created yet.'}
                         action={isAdmin ? (
@@ -247,7 +253,8 @@ function ProjectDetailPage() {
                         className="form-control"
                         placeholder="e.g. Design homepage"
                         value={taskForm.title}
-                        onChange={(e) => setTaskForm((p) => ({ ...p, title: e.target.value }))}
+                        onChange={(e) => handleTaskFormChange('title', e.target.value)}
+                        maxLength={200}
                     />
                     {taskErrors.title && <div className="form-error">{taskErrors.title}</div>}
                 </div>
@@ -258,7 +265,7 @@ function ProjectDetailPage() {
                         rows={3}
                         placeholder="Optional task description…"
                         value={taskForm.description}
-                        onChange={(e) => setTaskForm((p) => ({ ...p, description: e.target.value }))}
+                        onChange={(e) => handleTaskFormChange('description', e.target.value)}
                         style={{ resize: 'vertical' }}
                         maxLength={2000}
                     />
@@ -270,7 +277,7 @@ function ProjectDetailPage() {
                         <select
                             className="form-control"
                             value={taskForm.assignedUserId}
-                            onChange={(e) => setTaskForm((p) => ({ ...p, assignedUserId: e.target.value }))}
+                            onChange={(e) => handleTaskFormChange('assignedUserId', e.target.value)}
                         >
                             <option value="">Unassigned</option>
                             {(project.assignedUsers || []).map((u) => (
