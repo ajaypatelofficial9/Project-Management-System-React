@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { getUserAuthData } from '../../redux/AuthSlice/index.slice.jsx';
 import { setTasks, getTasks } from '../../redux/TaskSlice/index.slice.jsx';
 import TaskService from '../../services/task.service.js';
 import AppLayout from '../common/AppLayout.jsx';
@@ -13,9 +12,7 @@ import baseRoutes from '../../constants/routes.js';
 function TasksPage() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const userAuthData = useSelector(getUserAuthData);
     const tasks = useSelector(getTasks);
-    const isAdmin = userAuthData?.role === 'admin';
 
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
@@ -29,6 +26,8 @@ function TasksPage() {
         const res = await TaskService.getAll();
         if (res.status === 200) {
             dispatch(setTasks(Array.isArray(res.data) ? res.data : []));
+        } else {
+            dispatch(setTasks([]));
         }
         setLoading(false);
     };

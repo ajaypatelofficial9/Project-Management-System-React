@@ -61,6 +61,7 @@ const Sidebar = () => {
     const navItems  = isAdmin ? NAV_ADMIN : NAV_USER;
 
     const handleLogout = () => {
+        localStorage.removeItem('token');
         dispatch(logoutUserAuthAction());
         toast.success('Logged out');
         navigate(baseRoutes.loginPage);

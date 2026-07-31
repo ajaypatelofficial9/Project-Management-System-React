@@ -39,7 +39,8 @@ export const updateUserAuthdataLogin = (data) => async (dispatch) => {
 
 export const logout = (navigate) => async (dispatch) => {
   try {
-    dispatch(logoutSuperAdminAction());
+    localStorage.removeItem("token");
+    dispatch(logoutUserAuthAction());
     navigate("/");
   } catch (error) {
         console.log(error)
