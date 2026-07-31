@@ -60,8 +60,16 @@ function ProjectDetailPage() {
 
     const validateTask = () => {
         const errs = {};
-        if (!taskForm.title.trim()) errs.title = 'Title is required';
-        else if (taskForm.title.trim().length < 2) errs.title = 'Title must be at least 2 characters';
+        if (!taskForm.title.trim()) {
+            errs.title = 'Title is required.';
+        } else if (taskForm.title.trim().length < 2) {
+            errs.title = 'Title must be at least 2 characters.';
+        } else if (taskForm.title.trim().length > 200) {
+            errs.title = 'Title must be 200 characters or fewer.';
+        }
+        if (taskForm.description && taskForm.description.trim().length > 0 && taskForm.description.trim().length < 3) {
+            errs.description = 'Description must be at least 3 characters.';
+        }
         return errs;
     };
 
@@ -202,12 +210,14 @@ function ProjectDetailPage() {
                                             {new Date(task.createdAt).toLocaleDateString()}
                                         </td>
                                         <td>
-                                            <button
-                                                className="btn btn-outline btn-sm"
-                                                onClick={() => navigate(baseRoutes.taskDetailPath(task.id))}
-                                            >
-                                                View
-                                            </button>
+                                            <div style={{ display: 'flex', gap: 6 }}>
+                                                <button
+                                                    className="btn btn-outline btn-sm"
+                                                    onClick={() => navigate(baseRoutes.taskDetailPath(task.id))}
+                                                >
+                                                    View
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -250,7 +260,9 @@ function ProjectDetailPage() {
                         value={taskForm.description}
                         onChange={(e) => setTaskForm((p) => ({ ...p, description: e.target.value }))}
                         style={{ resize: 'vertical' }}
+                        maxLength={2000}
                     />
+                    {taskErrors.description && <div className="form-error">{taskErrors.description}</div>}
                 </div>
                 {(project.assignedUsers || []).length > 0 && (
                     <div className="form-group">

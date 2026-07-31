@@ -17,6 +17,10 @@ const TaskService = {
         return api.post('/tasks', payload);
     },
 
+    async update(id, payload) {
+        return api.put(`/tasks/${id}`, payload);
+    },
+
     async updateStatus(id, status) {
         return api.patch(`/tasks/${id}/status`, { status });
     },
