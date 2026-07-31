@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Formik } from 'formik';
-import * as Yup from 'yup';
 import { toast } from 'react-toastify';
 import { getUserAuthData, updateUserAuthDataAction } from '../../redux/AuthSlice/index.slice.jsx';
 import AuthServices from '../../services/auth.service.js';
@@ -16,18 +14,47 @@ function UserProfile() {
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isUploadingImage, setIsUploadingImage] = useState(false);
-    const [profileImageURL, setProfileImageURL] = useState(userAuthData?.profileImageURL || null);
-    const [profilePreview, setProfilePreview] = useState(userAuthData?.profileImageURL || null);
+    const [profileImageURL, setProfileImageURL] = useState(userAuthData?.profileImageURL || '');
+    const [profilePreview, setProfilePreview] = useState(userAuthData?.profileImageURL || '');
 
+    // Form state — fully controlled, not via Formik so disabled bug can't occur
+    const [fields, setFields] = useState({
+        firstName: userAuthData?.firstName || '',
+        lastName: userAuthData?.lastName || '',
+        address: userAuthData?.address || '',
+    });
+    const [errors, setErrors] = useState({});
+
+    // Sync when redux data changes (e.g. after save)
     useEffect(() => {
-        setProfileImageURL(userAuthData?.profileImageURL || null);
-        setProfilePreview(userAuthData?.profileImageURL || null);
-    }, [userAuthData]);
+        setFields({
+            firstName: userAuthData?.firstName || '',
+            lastName: userAuthData?.lastName || '',
+            address: userAuthData?.address || '',
+        });
+        setProfileImageURL(userAuthData?.profileImageURL || '');
+        setProfilePreview(userAuthData?.profileImageURL || '');
+    }, [userAuthData?.id]);
+
+    const handleFieldChange = (field, value) => {
+        setFields((prev) => ({ ...prev, [field]: value }));
+        if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+    };
+
+    const validate = () => {
+        const errs = {};
+        if (!fields.firstName.trim()) errs.firstName = 'First name is required.';
+        else if (fields.firstName.trim().length < 2) errs.firstName = 'Must be at least 2 characters.';
+        if (!fields.lastName.trim()) errs.lastName = 'Last name is required.';
+        else if (fields.lastName.trim().length < 2) errs.lastName = 'Must be at least 2 characters.';
+        if (fields.address.trim() && fields.address.trim().length < 3) errs.address = 'Must be at least 3 characters.';
+        return errs;
+    };
 
     const handlePhotoChange = async (event) => {
         const file = event.currentTarget.files[0];
         if (!file) return;
-        if (file.size > 5 * 1024 * 1024) { toast.error('File size must be less than 5MB'); return; }
+        if (file.size > 5 * 1024 * 1024) { toast.error('File must be less than 5MB'); return; }
         if (!file.type.startsWith('image/')) { toast.error('Only image files are allowed'); return; }
         setIsUploadingImage(true);
         try {
@@ -46,10 +73,19 @@ function UserProfile() {
         }
     };
 
-    const handleProfileUpdate = async (values) => {
+    const handleSave = async () => {
+        const errs = validate();
+        if (Object.keys(errs).length) { setErrors(errs); return; }
+
         setIsSaving(true);
         try {
-            const payload = { id: userAuthData?.id, firstName: values.firstName, lastName: values.lastName, address: values.address, profileImageURL };
+            const payload = {
+                id: userAuthData?.id,
+                firstName: fields.firstName.trim(),
+                lastName: fields.lastName.trim(),
+                address: fields.address.trim() || null,
+                profileImageURL: profileImageURL || null,
+            };
             const res = await AuthServices.UpdateProfile(payload);
             if (res.status === 200) {
                 dispatch(updateUserAuthDataAction({ ...userAuthData, ...payload }));
@@ -65,6 +101,19 @@ function UserProfile() {
         }
     };
 
+    const handleCancel = () => {
+        // Reset back to redux state
+        setFields({
+            firstName: userAuthData?.firstName || '',
+            lastName: userAuthData?.lastName || '',
+            address: userAuthData?.address || '',
+        });
+        setProfileImageURL(userAuthData?.profileImageURL || '');
+        setProfilePreview(userAuthData?.profileImageURL || '');
+        setErrors({});
+        setIsEditing(false);
+    };
+
     const initials = `${(userAuthData?.firstName || '?')[0]}${(userAuthData?.lastName || '')[0] || ''}`.toUpperCase();
 
     return (
@@ -76,108 +125,138 @@ function UserProfile() {
                 </div>
             </div>
 
-            <div style={{ maxWidth: 560 }}>
+            <div style={{ maxWidth: 520 }}>
                 <div className="card">
-                    {/* Avatar */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 28, paddingBottom: 24, borderBottom: '1px solid var(--border)' }}>
-                        <div style={{ width: 72, height: 72, borderRadius: '50%', overflow: 'hidden', background: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, fontWeight: 700, color: 'var(--primary)', flexShrink: 0 }}>
-                            {profilePreview ? <img src={profilePreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
+                    {/* Avatar row */}
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: 16,
+                        marginBottom: 24, paddingBottom: 20, borderBottom: '1px solid var(--border)',
+                    }}>
+                        <div style={{
+                            width: 64, height: 64, borderRadius: '50%', overflow: 'hidden',
+                            background: 'var(--primary-light)', display: 'flex', alignItems: 'center',
+                            justifyContent: 'center', fontSize: 22, fontWeight: 700,
+                            color: 'var(--primary)', flexShrink: 0, border: '1px solid var(--border)',
+                        }}>
+                            {profilePreview
+                                ? <img src={profilePreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                : initials}
                         </div>
                         <div>
-                            <div style={{ fontSize: 18, fontWeight: 700 }}>{userAuthData?.firstName} {userAuthData?.lastName}</div>
-                            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>{userAuthData?.email}</div>
-                            <div style={{ marginTop: 6 }}><Badge value={userAuthData?.role || 'user'} /></div>
+                            <div style={{ fontSize: 16, fontWeight: 700 }}>
+                                {userAuthData?.firstName} {userAuthData?.lastName}
+                            </div>
+                            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                                {userAuthData?.email}
+                            </div>
+                            <div style={{ marginTop: 6 }}>
+                                <Badge value={userAuthData?.role || 'user'} />
+                            </div>
                         </div>
                     </div>
 
-                    <Formik
-                        enableReinitialize
-                        initialValues={{
-                            firstName: userAuthData?.firstName || '',
-                            lastName: userAuthData?.lastName || '',
-                            address: userAuthData?.address || '',
-                            email: userAuthData?.email || '',
-                        }}
-                        validationSchema={Yup.object({
-                            firstName: Yup.string().min(2).required('First name is required'),
-                            lastName: Yup.string().min(2).required('Last name is required'),
-                            address: Yup.string().min(3).optional(),
-                        })}
-                        onSubmit={handleProfileUpdate}
-                    >
-                        {({ values, errors, touched, handleChange, handleBlur, handleSubmit }) => (
-                            <form onSubmit={handleSubmit}>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                                    <div className="form-group">
-                                        <label className="form-label">First Name</label>
-                                        <input
-                                            type="text"
-                                            name="firstName"
-                                            className="form-control"
-                                            value={values.firstName}
-                                            onChange={handleChange}
-                                            onBlur={handleBlur}
-                                            disabled={!isEditing || isSaving}
-                                        />
-                                        {touched.firstName && errors.firstName && <div className="form-error">{errors.firstName}</div>}
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Last Name</label>
-                                        <input
-                                            type="text"
-                                            name="lastName"
-                                            className="form-control"
-                                            value={values.lastName}
-                                            onChange={handleChange}
-                                            onBlur={handleBlur}
-                                            disabled={!isEditing || isSaving}
-                                        />
-                                        {touched.lastName && errors.lastName && <div className="form-error">{errors.lastName}</div>}
-                                    </div>
-                                </div>
+                    {/* Form fields */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>
+                        <div className="form-group">
+                            <label className="form-label">First Name</label>
+                            <input
+                                type="text"
+                                className="form-control"
+                                value={fields.firstName}
+                                onChange={(e) => handleFieldChange('firstName', e.target.value)}
+                                disabled={!isEditing || isSaving}
+                                maxLength={50}
+                            />
+                            {errors.firstName && <div className="form-error">{errors.firstName}</div>}
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Last Name</label>
+                            <input
+                                type="text"
+                                className="form-control"
+                                value={fields.lastName}
+                                onChange={(e) => handleFieldChange('lastName', e.target.value)}
+                                disabled={!isEditing || isSaving}
+                                maxLength={50}
+                            />
+                            {errors.lastName && <div className="form-error">{errors.lastName}</div>}
+                        </div>
+                    </div>
 
-                                <div className="form-group">
-                                    <label className="form-label">Email</label>
-                                    <input type="email" name="email" className="form-control" value={values.email} readOnly />
-                                </div>
+                    <div className="form-group">
+                        <label className="form-label">Email</label>
+                        <input
+                            type="email"
+                            className="form-control"
+                            value={userAuthData?.email || ''}
+                            readOnly
+                        />
+                    </div>
 
-                                <div className="form-group">
-                                    <label className="form-label">Address</label>
-                                    <textarea
-                                        name="address"
-                                        className="form-control"
-                                        rows={2}
-                                        value={values.address}
-                                        onChange={handleChange}
-                                        onBlur={handleBlur}
-                                        disabled={!isEditing || isSaving}
-                                        style={{ resize: 'vertical' }}
-                                    />
-                                </div>
+                    <div className="form-group">
+                        <label className="form-label">Address</label>
+                        <textarea
+                            className="form-control"
+                            rows={2}
+                            value={fields.address}
+                            onChange={(e) => handleFieldChange('address', e.target.value)}
+                            disabled={!isEditing || isSaving}
+                            placeholder="Your address"
+                            style={{ resize: 'vertical' }}
+                            maxLength={200}
+                        />
+                        {errors.address && <div className="form-error">{errors.address}</div>}
+                    </div>
 
-                                {isEditing && (
-                                    <div className="form-group">
-                                        <label className="form-label">Profile Photo</label>
-                                        <input type="file" accept="image/*" className="form-control" onChange={handlePhotoChange} disabled={isUploadingImage} />
-                                        {isUploadingImage && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, display: 'flex', gap: 6, alignItems: 'center' }}><Spinner size="sm" /> Uploading…</div>}
-                                    </div>
-                                )}
-
-                                <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-                                    {!isEditing ? (
-                                        <button type="button" className="btn btn-primary" onClick={() => setIsEditing(true)}>Edit Profile</button>
-                                    ) : (
-                                        <>
-                                            <button type="submit" className="btn btn-primary" disabled={isSaving || isUploadingImage}>
-                                                {isSaving ? <><Spinner size="sm" /> &nbsp;Saving…</> : 'Save Changes'}
-                                            </button>
-                                            <button type="button" className="btn btn-secondary" onClick={() => setIsEditing(false)} disabled={isSaving}>Cancel</button>
-                                        </>
-                                    )}
+                    {isEditing && (
+                        <div className="form-group">
+                            <label className="form-label">Profile Photo</label>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                className="form-control"
+                                onChange={handlePhotoChange}
+                                disabled={isUploadingImage || isSaving}
+                            />
+                            {isUploadingImage && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                                    <Spinner size="sm" /> Uploading…
                                 </div>
-                            </form>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Action buttons */}
+                    <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                        {!isEditing ? (
+                            <button
+                                type="button"
+                                className="btn btn-primary"
+                                onClick={() => setIsEditing(true)}
+                            >
+                                Edit Profile
+                            </button>
+                        ) : (
+                            <>
+                                <button
+                                    type="button"
+                                    className="btn btn-primary"
+                                    onClick={handleSave}
+                                    disabled={isSaving || isUploadingImage}
+                                >
+                                    {isSaving ? <><Spinner size="sm" /> Saving…</> : 'Save Changes'}
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    onClick={handleCancel}
+                                    disabled={isSaving}
+                                >
+                                    Cancel
+                                </button>
+                            </>
                         )}
-                    </Formik>
+                    </div>
                 </div>
             </div>
         </AppLayout>
