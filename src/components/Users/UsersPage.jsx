@@ -125,8 +125,8 @@ function UsersPage() {
                                 <tr>
                                     <th>Name</th>
                                     <th>Email</th>
-                                    <th>Role</th>
-                                    <th>Status</th>
+                                    <th className="table-cell-center">Role</th>
+                                    <th className="table-cell-center">Status</th>
                                     <th>Created</th>
                                 </tr>
                             </thead>
@@ -135,8 +135,8 @@ function UsersPage() {
                                     <tr key={u.id}>
                                         <td style={{ fontWeight: 500 }}>{u.firstName} {u.lastName}</td>
                                         <td style={{ color: 'var(--text-secondary)' }}>{u.email}</td>
-                                        <td><Badge value={u.role} /></td>
-                                        <td><Badge value={u.status} /></td>
+                                        <td className="table-cell-center"><Badge value={u.role} /></td>
+                                        <td className="table-cell-center"><Badge value={u.status} /></td>
                                         <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDate(u.createdAt)}</td>
                                     </tr>
                                 ))}
