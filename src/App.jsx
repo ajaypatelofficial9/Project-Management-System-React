@@ -1,41 +1,60 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import './App.css'
 
 import UserLogin from './components/Login/index.jsx';
 import UserSignup from './components/Signup/index.jsx';
 import UserProfile from './components/Dashboard/index.jsx';
-import HomePage from './components/Dashboard/homepage.jsx';
-import { withAuth, withGuest } from './HOCs/AuthHOCs.jsx';
+import DashboardPage from './components/Dashboard/DashboardPage.jsx';
+import ProjectsPage from './components/Projects/ProjectsPage.jsx';
+import ProjectDetailPage from './components/Projects/ProjectDetailPage.jsx';
+import TasksPage from './components/Tasks/TasksPage.jsx';
+import TaskDetailPage from './components/Tasks/TaskDetailPage.jsx';
+import { withAuth, withGuest, withAdmin } from './HOCs/AuthHOCs.jsx';
 
-const AuthenticatedUserProfile = withAuth(UserProfile);
-const GuestUserLogin = withGuest(UserLogin);
-const GuestUserSignup = withGuest(UserSignup);
+// Wrap with appropriate guards
+const AuthDashboard = withAuth(DashboardPage);
+const AuthProjects = withAuth(ProjectsPage);
+const AuthProjectDetail = withAuth(ProjectDetailPage);
+const AuthTasks = withAdmin(TasksPage);   // tasks list is admin-only
+const AuthTaskDetail = withAuth(TaskDetailPage);
+const AuthProfile = withAuth(UserProfile);
+const GuestLogin = withGuest(UserLogin);
+const GuestSignup = withGuest(UserSignup);
 
 function App() {
+    return (
+        <>
+            <ToastContainer
+                position="top-right"
+                autoClose={3000}
+                hideProgressBar={false}
+                newestOnTop
+                closeOnClick
+                pauseOnHover
+                draggable
+            />
+            <BrowserRouter>
+                <Routes>
+                    {/* Public / guest routes */}
+                    <Route path="/" element={<Navigate to="/login" replace />} />
+                    <Route path="/login" element={<GuestLogin />} />
+                    <Route path="/signup" element={<GuestSignup />} />
 
-  return <>
-    <ToastContainer
-      position="top-right"
-      autoClose={3000}
-      hideProgressBar={false}
-      newestOnTop={false}
-      closeOnClick
-      rtl={false}
-      pauseOnFocusLoss
-      draggable
-      pauseOnHover
-    />
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<GuestUserLogin />} />
-        <Route path="/signup" element={<GuestUserSignup />} />
-        <Route path="/profile" element={<AuthenticatedUserProfile />} />
-      </Routes>
-    </BrowserRouter>
-  </>
+                    {/* Authenticated routes */}
+                    <Route path="/dashboard" element={<AuthDashboard />} />
+                    <Route path="/projects" element={<AuthProjects />} />
+                    <Route path="/projects/:id" element={<AuthProjectDetail />} />
+                    <Route path="/tasks" element={<AuthTasks />} />
+                    <Route path="/tasks/:id" element={<AuthTaskDetail />} />
+                    <Route path="/profile" element={<AuthProfile />} />
+
+                    {/* Catch-all */}
+                    <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                </Routes>
+            </BrowserRouter>
+        </>
+    );
 }
 
-export default App
+export default App;

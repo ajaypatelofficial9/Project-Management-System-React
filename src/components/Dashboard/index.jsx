@@ -1,227 +1,187 @@
-import { Formik } from "formik";
-import * as Yup from "yup";
-import './index.css'
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import { logoutUserAuthAction, getUserAuthData, updateUserAuthDataAction } from '../../redux/AuthSlice/index.slice.jsx';
+import { Formik } from 'formik';
+import * as Yup from 'yup';
 import { toast } from 'react-toastify';
+import { getUserAuthData, updateUserAuthDataAction } from '../../redux/AuthSlice/index.slice.jsx';
 import AuthServices from '../../services/auth.service.js';
+import AppLayout from '../common/AppLayout.jsx';
+import Spinner from '../common/Spinner.jsx';
+import Badge from '../common/Badge.jsx';
 
 function UserProfile() {
     const dispatch = useDispatch();
-    const navigate = useNavigate();
     const userAuthData = useSelector(getUserAuthData);
-    const [profilePhotoFile, setProfilePhotoFile] = useState(null);
-    const [profilePhotoPreview, setProfilePhotoPreview] = useState(userAuthData?.profileImageURL || null);
-    const [profileImageURL, setProfileImageURL] = useState(userAuthData?.profileImageURL || null);
+
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isUploadingImage, setIsUploadingImage] = useState(false);
+    const [profileImageURL, setProfileImageURL] = useState(userAuthData?.profileImageURL || null);
+    const [profilePreview, setProfilePreview] = useState(userAuthData?.profileImageURL || null);
 
     useEffect(() => {
-        setProfilePhotoPreview(userAuthData?.profileImageURL || null);
         setProfileImageURL(userAuthData?.profileImageURL || null);
+        setProfilePreview(userAuthData?.profileImageURL || null);
     }, [userAuthData]);
-
-    const handleLogout = () => {
-        dispatch(logoutUserAuthAction());
-        toast.success('Logged out successfully');
-        navigate('/');
-    };
-
-    const handleProfileUpdate = async (values) => {
-        setIsSaving(true);
-        try {
-            const payload = {
-                id: userAuthData?.id,
-                firstName: values.firstName,
-                lastName: values.lastName,
-                address: values.address,
-                profileImageURL: profileImageURL,
-            };
-
-            const response = await AuthServices.UpdateProfile(payload);
-            if (response.status === 200) {
-                dispatch(updateUserAuthDataAction({
-                    ...userAuthData,
-                    ...payload,
-                }));
-                toast.success('Profile updated successfully');
-                setIsEditing(false);
-            } else {
-                toast.error(response.message || 'Profile update failed');
-            }
-        } catch (error) {
-            console.error('Profile update error:', error);
-            toast.error('Something went wrong during profile update');
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const initialValues = {
-        firstName: userAuthData?.firstName || '',
-        lastName: userAuthData?.lastName || '',
-        address: userAuthData?.address || '',
-        email: userAuthData?.email || '',
-    };
 
     const handlePhotoChange = async (event) => {
         const file = event.currentTarget.files[0];
-        if (!file) {
-            return;
-        }
-
-        if (file.size > 5 * 1024 * 1024) {
-            toast.error('File size must be less than 5MB');
-            return;
-        }
-
-        if (!file.type.startsWith('image/')) {
-            toast.error('Only image files are allowed');
-            return;
-        }
-
-        setProfilePhotoFile(file);
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) { toast.error('File size must be less than 5MB'); return; }
+        if (!file.type.startsWith('image/')) { toast.error('Only image files are allowed'); return; }
         setIsUploadingImage(true);
-
         try {
-            const uploadResponse = await AuthServices.UploadProfilePhoto(file);
-            if (uploadResponse.status === 200) {
-                setProfileImageURL(uploadResponse.data.profileImageURL);
-                setProfilePhotoPreview(uploadResponse.data.profileImageURL);
-                toast.success('Profile image uploaded successfully');
+            const res = await AuthServices.UploadProfilePhoto(file);
+            if (res.status === 200) {
+                setProfileImageURL(res.data.profileImageURL);
+                setProfilePreview(res.data.profileImageURL);
+                toast.success('Photo uploaded');
             } else {
-                toast.error(uploadResponse.message || 'Image upload failed');
+                toast.error(res.message || 'Upload failed');
             }
-        } catch (error) {
-            console.error('Image upload error:', error);
-            toast.error('Failed to upload profile image');
+        } catch {
+            toast.error('Upload failed');
         } finally {
             setIsUploadingImage(false);
         }
     };
 
-    if (!userAuthData || !userAuthData.email) {
-        return (
-            <div className="profile" style={{ textAlign: 'center', padding: '50px' }}>
-                <h2>Loading profile...</h2>
-            </div>
-        );
-    }
+    const handleProfileUpdate = async (values) => {
+        setIsSaving(true);
+        try {
+            const payload = { id: userAuthData?.id, firstName: values.firstName, lastName: values.lastName, address: values.address, profileImageURL };
+            const res = await AuthServices.UpdateProfile(payload);
+            if (res.status === 200) {
+                dispatch(updateUserAuthDataAction({ ...userAuthData, ...payload }));
+                toast.success('Profile updated');
+                setIsEditing(false);
+            } else {
+                toast.error(res.message || 'Update failed');
+            }
+        } catch {
+            toast.error('Something went wrong');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const initials = `${(userAuthData?.firstName || '?')[0]}${(userAuthData?.lastName || '')[0] || ''}`.toUpperCase();
 
     return (
-        <div className="profile">
-            <div className="profile-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div className="profile-photo">
-                    {profilePhotoPreview ? (
-                        <img
-                            src={profilePhotoPreview}
-                            alt="Profile"
-                            style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover' }}
-                        />
-                    ) : (
-                        <div style={{ width: '100px', height: '100px', borderRadius: '50%', backgroundColor: '#ccc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            No Photo
-                        </div>
-                    )}
+        <AppLayout title="My Profile">
+            <div className="page-header">
+                <div>
+                    <h1 className="page-title">My Profile</h1>
+                    <p className="page-subtitle">Manage your personal information</p>
                 </div>
-                <h2>User Profile</h2>
             </div>
-            <Formik
-                enableReinitialize
-                initialValues={initialValues}
-                validationSchema={Yup.object({
-                    firstName: Yup.string().min(2, 'First name must be at least 2 characters').required('First name is required'),
-                    lastName: Yup.string().min(2, 'Last name must be at least 2 characters').required('Last name is required'),
-                    address: Yup.string().min(3, 'Address must be at least 3 characters'),
-                })}
-                onSubmit={handleProfileUpdate}
-            >
-                {({ values, errors, touched, handleChange, handleBlur, handleSubmit }) => (
-                    <div className="form">
-                        <form onSubmit={handleSubmit}>
-                            <input
-                                type="text"
-                                name="firstName"
-                                onChange={handleChange}
-                                onBlur={handleBlur}
-                                value={values.firstName}
-                                placeholder="Enter first name"
-                                className="form-control inp_text"
-                                id="firstName"
-                                disabled={!isEditing || isSaving}
-                            />
-                            {touched.firstName && errors.firstName && <div className="error">{errors.firstName}</div>}
 
-                            <input
-                                type="text"
-                                name="lastName"
-                                onChange={handleChange}
-                                onBlur={handleBlur}
-                                value={values.lastName}
-                                placeholder="Enter last name"
-                                className="form-control inp_text"
-                                id="lastName"
-                                disabled={!isEditing || isSaving}
-                            />
-                            {touched.lastName && errors.lastName && <div className="error">{errors.lastName}</div>}
-                            <input
-                                type="email"
-                                name="email"
-                                value={values.email}
-                                placeholder="Email"
-                                className="form-control inp_text mt-2"
-                                id="email"
-                                readOnly
-                            />
-
-                            <div style={{ margin: '16px 0' }}>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handlePhotoChange}
-                                    disabled={!isEditing || isUploadingImage}
-                                    className="form-control"
-                                />
-                                {isUploadingImage && <p style={{ marginTop: '8px', color: '#666' }}>Uploading image...</p>}
-                            </div>
-
-                            {!isEditing ? (
-                                <button type="button" onClick={() => setIsEditing(true)}>Edit Profile</button>
-                            ) : (
-                                <>
-                                    <button type="submit" disabled={isSaving || isUploadingImage}>
-                                        {isSaving ? 'Saving...' : 'Update Profile'}
-                                    </button>
-                                    <button className="mt-3" type="button" onClick={() => setIsEditing(false)} disabled={isSaving || isUploadingImage}>
-                                        Cancel
-                                    </button>
-                                </>
-                            )}
-
-                            <button
-                                type="button"
-                                onClick={handleLogout}
-                                style={{
-                                    backgroundColor: '#dc3545',
-                                    color: 'white',
-                                    border: 'none',
-                                    padding: '10px 20px',
-                                    borderRadius: '5px',
-                                    cursor: 'pointer',
-                                    marginTop: '20px',
-                                }}
-                                disabled={isSaving || isUploadingImage}
-                            >
-                                Logout
-                            </button>
-                        </form>
+            <div style={{ maxWidth: 560 }}>
+                <div className="card">
+                    {/* Avatar */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 28, paddingBottom: 24, borderBottom: '1px solid var(--border)' }}>
+                        <div style={{ width: 72, height: 72, borderRadius: '50%', overflow: 'hidden', background: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, fontWeight: 700, color: 'var(--primary)', flexShrink: 0 }}>
+                            {profilePreview ? <img src={profilePreview} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
+                        </div>
+                        <div>
+                            <div style={{ fontSize: 18, fontWeight: 700 }}>{userAuthData?.firstName} {userAuthData?.lastName}</div>
+                            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>{userAuthData?.email}</div>
+                            <div style={{ marginTop: 6 }}><Badge value={userAuthData?.role || 'user'} /></div>
+                        </div>
                     </div>
-                )}
-            </Formik>
-        </div>
+
+                    <Formik
+                        enableReinitialize
+                        initialValues={{
+                            firstName: userAuthData?.firstName || '',
+                            lastName: userAuthData?.lastName || '',
+                            address: userAuthData?.address || '',
+                            email: userAuthData?.email || '',
+                        }}
+                        validationSchema={Yup.object({
+                            firstName: Yup.string().min(2).required('First name is required'),
+                            lastName: Yup.string().min(2).required('Last name is required'),
+                            address: Yup.string().min(3).optional(),
+                        })}
+                        onSubmit={handleProfileUpdate}
+                    >
+                        {({ values, errors, touched, handleChange, handleBlur, handleSubmit }) => (
+                            <form onSubmit={handleSubmit}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                    <div className="form-group">
+                                        <label className="form-label">First Name</label>
+                                        <input
+                                            type="text"
+                                            name="firstName"
+                                            className="form-control"
+                                            value={values.firstName}
+                                            onChange={handleChange}
+                                            onBlur={handleBlur}
+                                            disabled={!isEditing || isSaving}
+                                        />
+                                        {touched.firstName && errors.firstName && <div className="form-error">{errors.firstName}</div>}
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Last Name</label>
+                                        <input
+                                            type="text"
+                                            name="lastName"
+                                            className="form-control"
+                                            value={values.lastName}
+                                            onChange={handleChange}
+                                            onBlur={handleBlur}
+                                            disabled={!isEditing || isSaving}
+                                        />
+                                        {touched.lastName && errors.lastName && <div className="form-error">{errors.lastName}</div>}
+                                    </div>
+                                </div>
+
+                                <div className="form-group">
+                                    <label className="form-label">Email</label>
+                                    <input type="email" name="email" className="form-control" value={values.email} readOnly />
+                                </div>
+
+                                <div className="form-group">
+                                    <label className="form-label">Address</label>
+                                    <textarea
+                                        name="address"
+                                        className="form-control"
+                                        rows={2}
+                                        value={values.address}
+                                        onChange={handleChange}
+                                        onBlur={handleBlur}
+                                        disabled={!isEditing || isSaving}
+                                        style={{ resize: 'vertical' }}
+                                    />
+                                </div>
+
+                                {isEditing && (
+                                    <div className="form-group">
+                                        <label className="form-label">Profile Photo</label>
+                                        <input type="file" accept="image/*" className="form-control" onChange={handlePhotoChange} disabled={isUploadingImage} />
+                                        {isUploadingImage && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, display: 'flex', gap: 6, alignItems: 'center' }}><Spinner size="sm" /> Uploading…</div>}
+                                    </div>
+                                )}
+
+                                <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+                                    {!isEditing ? (
+                                        <button type="button" className="btn btn-primary" onClick={() => setIsEditing(true)}>Edit Profile</button>
+                                    ) : (
+                                        <>
+                                            <button type="submit" className="btn btn-primary" disabled={isSaving || isUploadingImage}>
+                                                {isSaving ? <><Spinner size="sm" /> &nbsp;Saving…</> : 'Save Changes'}
+                                            </button>
+                                            <button type="button" className="btn btn-secondary" onClick={() => setIsEditing(false)} disabled={isSaving}>Cancel</button>
+                                        </>
+                                    )}
+                                </div>
+                            </form>
+                        )}
+                    </Formik>
+                </div>
+            </div>
+        </AppLayout>
     );
 }
-export default UserProfile
+
+export default UserProfile;
