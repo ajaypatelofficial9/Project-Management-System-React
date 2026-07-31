@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { getUserAuthData } from '../../redux/AuthSlice/index.slice.jsx';
-import { setProjects, addProject, getProjects } from '../../redux/ProjectSlice/index.slice.jsx';
+import { setProjects, addProject, updateProjectInList, getProjects } from '../../redux/ProjectSlice/index.slice.jsx';
 import ProjectService from '../../services/project.service.js';
 import AppLayout from '../common/AppLayout.jsx';
 import Spinner from '../common/Spinner.jsx';
@@ -20,7 +20,9 @@ function ProjectsPage() {
     const isAdmin = userAuthData?.role === 'admin';
 
     const [loading, setLoading] = useState(true);
-    const [showModal, setShowModal] = useState(false);
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editingProject, setEditingProject] = useState(null);
     const [allUsers, setAllUsers] = useState([]);
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState({ name: '', description: '', assignedUserIds: [] });
@@ -49,9 +51,19 @@ function ProjectsPage() {
 
     const validate = () => {
         const errs = {};
-        if (!form.name.trim()) errs.name = 'Project name is required';
-        else if (form.name.trim().length < 2) errs.name = 'Name must be at least 2 characters';
+        if (!form.name.trim()) {
+            errs.name = 'Project name is required.';
+        } else if (form.name.trim().length < 2) {
+            errs.name = 'Name must be at least 2 characters.';
+        }
         return errs;
+    };
+
+    const handleFormChange = (field, value) => {
+        setForm((prev) => ({ ...prev, [field]: value }));
+        if (formErrors[field]) {
+            setFormErrors((prev) => ({ ...prev, [field]: undefined }));
+        }
     };
 
     const handleCreate = async () => {
@@ -61,13 +73,46 @@ function ProjectsPage() {
         const res = await ProjectService.create(form);
         setSaving(false);
         if (res.status === 200 || res.status === 201) {
-            toast.success('Project created!');
+            toast.success('Project created');
             dispatch(addProject(res.data));
-            setShowModal(false);
+            setShowCreateModal(false);
             setForm({ name: '', description: '', assignedUserIds: [] });
             setFormErrors({});
         } else {
             toast.error(res.message || 'Failed to create project');
+        }
+    };
+
+    const openEditModal = (project, e) => {
+        e.stopPropagation();
+        setEditingProject(project);
+        setForm({
+            name: project.name,
+            description: project.description || '',
+            assignedUserIds: (project.assignedUsers || []).map((u) => u.id),
+        });
+        setFormErrors({});
+        setShowEditModal(true);
+    };
+
+    const handleUpdate = async () => {
+        const errs = validate();
+        if (Object.keys(errs).length) { setFormErrors(errs); return; }
+        setSaving(true);
+        const res = await ProjectService.update(editingProject.id, {
+            name: form.name.trim(),
+            description: form.description.trim() || null,
+        });
+        setSaving(false);
+        if (res.status === 200) {
+            toast.success('Project updated');
+            dispatch(updateProjectInList(res.data));
+            setShowEditModal(false);
+            setEditingProject(null);
+            setForm({ name: '', description: '', assignedUserIds: [] });
+            setFormErrors({});
+        } else {
+            toast.error(res.message || 'Failed to update project');
         }
     };
 
@@ -92,19 +137,18 @@ function ProjectsPage() {
                     </p>
                 </div>
                 {isAdmin && (
-                    <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-                        + New Project
+                    <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
+                        New Project
                     </button>
                 )}
             </div>
 
             {projects.length === 0 ? (
                 <EmptyState
-                    icon="📁"
                     title="No projects yet"
                     description={isAdmin ? 'Create your first project to get started.' : 'You have no assigned projects yet.'}
                     action={isAdmin ? (
-                        <button className="btn btn-primary" onClick={() => setShowModal(true)}>Create Project</button>
+                        <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>Create Project</button>
                     ) : null}
                 />
             ) : (
@@ -121,7 +165,18 @@ function ProjectsPage() {
                         >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                                 <h3 className="project-card-title">{project.name}</h3>
-                                <Badge value={project.status} />
+                                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                    <Badge value={project.status} />
+                                    {isAdmin && (
+                                        <button
+                                            className="btn btn-outline btn-sm"
+                                            onClick={(e) => openEditModal(project, e)}
+                                            style={{ padding: '2px 8px', fontSize: '11px' }}
+                                        >
+                                            Edit
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                             <p className="project-card-desc">{project.description || 'No description provided.'}</p>
                             <div className="project-card-meta">
@@ -138,8 +193,7 @@ function ProjectsPage() {
                                 <span>{project.tasks?.length || 0} task{project.tasks?.length !== 1 ? 's' : ''}</span>
                             </div>
                             <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-muted)' }}>
-                                By {project.creator?.firstName} {project.creator?.lastName} &middot;{' '}
-                                {new Date(project.createdAt).toLocaleDateString()}
+                                By {project.creator?.firstName} {project.creator?.lastName} · {new Date(project.createdAt).toLocaleDateString()}
                             </div>
                         </div>
                     ))}
@@ -148,14 +202,14 @@ function ProjectsPage() {
 
             {/* Create Project Modal */}
             <Modal
-                isOpen={showModal}
-                onClose={() => { setShowModal(false); setFormErrors({}); setForm({ name: '', description: '', assignedUserIds: [] }); }}
+                isOpen={showCreateModal}
+                onClose={() => { setShowCreateModal(false); setFormErrors({}); setForm({ name: '', description: '', assignedUserIds: [] }); }}
                 title="Create New Project"
                 footer={
                     <>
-                        <button className="btn btn-secondary" onClick={() => setShowModal(false)} disabled={saving}>Cancel</button>
+                        <button className="btn btn-secondary" onClick={() => setShowCreateModal(false)} disabled={saving}>Cancel</button>
                         <button className="btn btn-primary" onClick={handleCreate} disabled={saving}>
-                            {saving ? <><Spinner size="sm" /> &nbsp;Creating…</> : 'Create Project'}
+                            {saving ? <><Spinner size="sm" /> Creating…</> : 'Create Project'}
                         </button>
                     </>
                 }
@@ -166,7 +220,8 @@ function ProjectsPage() {
                         className="form-control"
                         placeholder="e.g. Website Redesign"
                         value={form.name}
-                        onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                        onChange={(e) => handleFormChange('name', e.target.value)}
+                        maxLength={100}
                     />
                     {formErrors.name && <div className="form-error">{formErrors.name}</div>}
                 </div>
@@ -178,17 +233,18 @@ function ProjectsPage() {
                         rows={3}
                         placeholder="Optional project description…"
                         value={form.description}
-                        onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+                        onChange={(e) => handleFormChange('description', e.target.value)}
                         style={{ resize: 'vertical' }}
+                        maxLength={1000}
                     />
                 </div>
 
                 {allUsers.length > 0 && (
                     <div className="form-group">
                         <label className="form-label">Assign Users</label>
-                        <div style={{ maxHeight: 180, overflowY: 'auto', border: '1.5px solid var(--border)', borderRadius: 6, padding: 8 }}>
+                        <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 5, padding: 8 }}>
                             {allUsers.map((u) => (
-                                <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 4px', cursor: 'pointer', fontSize: 14 }}>
+                                <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 4px', cursor: 'pointer', fontSize: 13 }}>
                                     <input
                                         type="checkbox"
                                         checked={form.assignedUserIds.includes(u.id)}
@@ -201,6 +257,49 @@ function ProjectsPage() {
                         </div>
                     </div>
                 )}
+            </Modal>
+
+            {/* Edit Project Modal */}
+            <Modal
+                isOpen={showEditModal}
+                onClose={() => { setShowEditModal(false); setEditingProject(null); setFormErrors({}); }}
+                title="Edit Project"
+                footer={
+                    <>
+                        <button className="btn btn-secondary" onClick={() => { setShowEditModal(false); setEditingProject(null); }} disabled={saving}>Cancel</button>
+                        <button className="btn btn-primary" onClick={handleUpdate} disabled={saving}>
+                            {saving ? <><Spinner size="sm" /> Saving…</> : 'Save Changes'}
+                        </button>
+                    </>
+                }
+            >
+                <div className="form-group">
+                    <label className="form-label">Project Name *</label>
+                    <input
+                        className="form-control"
+                        placeholder="e.g. Website Redesign"
+                        value={form.name}
+                        onChange={(e) => handleFormChange('name', e.target.value)}
+                        maxLength={100}
+                    />
+                    {formErrors.name && <div className="form-error">{formErrors.name}</div>}
+                </div>
+
+                <div className="form-group">
+                    <label className="form-label">Description</label>
+                    <textarea
+                        className="form-control"
+                        rows={3}
+                        placeholder="Optional project description…"
+                        value={form.description}
+                        onChange={(e) => handleFormChange('description', e.target.value)}
+                        style={{ resize: 'vertical' }}
+                        maxLength={1000}
+                    />
+                </div>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                    To assign/reassign members, use the "Manage Members" button on the project detail page.
+                </p>
             </Modal>
         </AppLayout>
     );

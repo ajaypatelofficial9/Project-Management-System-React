@@ -9,6 +9,7 @@ const baseRoutes = {
   projectDetailPath: (id) => `/projects/${id}`,
   taskDetail: '/tasks/:id',
   taskDetailPath: (id) => `/tasks/${id}`,
+  users: '/users',
 };
 
 export default baseRoutes;

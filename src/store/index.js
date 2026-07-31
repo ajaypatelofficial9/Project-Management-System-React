@@ -15,12 +15,20 @@ import storage from 'redux-persist/es/storage';
 import { createStateSyncMiddleware, initMessageListener } from 'redux-state-sync';
 import { authSlice, projectSlice, taskSlice, commentSlice } from '../redux';
 
-const RootReducer = combineReducers({
+const appReducer = combineReducers({
     auth: authSlice,
     project: projectSlice,
     task: taskSlice,
     comment: commentSlice,
 });
+
+const RootReducer = (state, action) => {
+    if (action.type === 'auth/logoutUserAuthAction') {
+        return appReducer(undefined, action);
+    }
+
+    return appReducer(state, action);
+};
 
 const encryptor = encryptTransform({
     secretKey: 'userData',

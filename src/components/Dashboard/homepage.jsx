@@ -10,6 +10,7 @@ const HomePage = () => {
     const dispatch = useDispatch();
     
     const handleLogout = () => {
+        localStorage.removeItem('token');
         dispatch(logoutUserAuthAction());
         toast.success('Logged out successfully');
     };
